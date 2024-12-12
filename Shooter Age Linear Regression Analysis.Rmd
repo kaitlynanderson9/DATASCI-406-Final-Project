@@ -1,0 +1,66 @@
+---
+title: "Shooter Age Analysis"
+output: pdf_document
+date: "2024-12-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+data <- read.csv("school_shooting_db_20200316.csv", stringsAsFactors = FALSE)
+
+cleaned_data <- data |>
+  filter(!is.na(Shooter.Age), !is.na(Total.Injured.Killed.Victims), !is.na(State)) |>
+  mutate(
+    State = as.factor(State),
+    Total.Injured.Killed.Victims = Wounded + Killed..includes.shooter.
+  )
+
+model <- lm(Total.Injured.Killed.Victims ~ Shooter.Age + State, data = cleaned_data)
+summary(model)
+
+coefficients <- coef(model)
+sigma <- summary(model)$sigma 
+
+cleaned_data <- cleaned_data[complete.cases(cleaned_data[, c("Shooter.Age", "State", "Total.Injured.Killed.Victims")]), ]
+
+set.seed(123)
+cleaned_data$Simulated_Victims <- predict(model) + rnorm(nrow(cleaned_data), mean = 0, sd = sigma)
+
+simulated_model <- lm(Simulated_Victims ~ Shooter.Age + State, data = cleaned_data)
+summary(simulated_model)
+
+set.seed(123)
+n_simulations <- 1000
+simulated_coefficients <- replicate(n_simulations, {
+  cleaned_data$Simulated_Victims <- predict(model) + rnorm(nrow(cleaned_data), mean = 0, sd = sigma)
+  coef(lm(Simulated_Victims ~ Shooter.Age + State, data = cleaned_data))
+})
+
+simulated_coefficients <- as.data.frame(t(simulated_coefficients))
+colnames(simulated_coefficients) <- names(coefficients)
+
+ggplot(data = simulated_coefficients, aes(x = Shooter.Age)) +
+  geom_histogram(bins = 30, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Shooter Age Coefficient in Simulations",
+       x = "Coefficient Estimate",
+       y = "Frequency")
+
+quantile(simulated_coefficients$Shooter.Age, probs = c(0.025, 0.975))
+
+```
+
+```{r}
+state_coeffs <- simulated_coefficients[, grep("State", colnames(simulated_coefficients))]
+state_sd <- apply(state_coeffs, 2, sd)
+state_ci <- t(apply(state_coeffs, 2, function(x) quantile(x, probs = c(0.025, 0.975))))
+boxplot(state_coeffs, las = 2, main = "Variability in Simulated State Coefficients",
+        xlab = "State", ylab = "Simulated Coefficients")
+
+
+```
