@@ -1,6 +1,6 @@
 # **Supplemental Materials for DATASCI 406 Final Project**
 
-### Data Used:
+### Data:
 - "school_shooting_db_20200316.csv"
 
 ### Analysis:
