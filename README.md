@@ -5,5 +5,5 @@
 
 ### Analysis:
 1. run "pol-popdens_analysis.R"
-2. x
+2. run "bootstrap_analysis.R"
 3. run "Shooter Age Linear Regression Analysis.Rmd"
